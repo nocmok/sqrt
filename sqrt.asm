@@ -1,4 +1,4 @@
-format PE                                                            ; GUI
+format PE GUI
 use32
 entry _main
 
@@ -28,7 +28,7 @@ import  kernel32, \
 section '.data' data readable writeable
 
 fmt_out_buf db 256 dup(0)                                            ; буфер для форматированного вывода
-fmt_lf_buf  db 256 dup(0)                                            ; буфер для строкового представления результата
+fmt_lf_buf  db 256 dup(0)                                            ; буфер для строкового представления вещественного числа
 lf_in_str   db '%lf', 0
 lf_out_str  db '%.3lf', 0
 argv_str    dd ?
@@ -40,8 +40,8 @@ no_arg_str  db 'error: require to provide argument', 10, 13, 'type -h to get hel
 help_key    db '-h', 0
 help_key_sz dd 3
 help_str    db 'This program calculate sqrt(x + 1) by Taylor series.', 10, 13
-            db 'First arg should be floating point value in range [-1, 1].', 10, 13
-            db 'The output is calculated expression with defined precision.', 0
+            db 'Argument should be floating point value in range [-1, 1].', 10, 13
+            db 'The output is calculated expression with fixed precision.', 0
 
 cap         db 'Square root v1.0', 0
 res_str     db 'sqrt(1 + %s) = %s', 0
@@ -59,7 +59,7 @@ sub esp, 0x10                                                        ; оста�
 
 stdcall [GetCommandLine]                                             ; получаем строку аргументов
 mov [argv_str], eax                                                  ; записываем адрес начала строки в eax
-stdcall [strlen], [argv_str]                                         ; получаем длину строки аргументов
+cinvoke strlen, [argv_str]                                         ; получаем длину строки аргументов
 mov ecx, eax                                                         ; записываем длину строки в счетчик
 inc ecx                                                              ; с учетом терминирующего нуля
 
@@ -89,12 +89,12 @@ jmp _exit
 @@:                                                                  ; иначе продолжаем выполнение
 
 lea edx, [.x]                                                        ; получаем адрес переменной x
-stdcall [sscanf], [argv_str], lf_in_str, edx                         ; пробуем преобразовать строку к вещественному значению
+cinvoke sscanf, [argv_str], lf_in_str, edx                         ; пробуем преобразовать строку к вещественному значению
 
 test eax, eax                                                        ; устанавливает ZF в 0, если преобразование не удалось
 jnz @f
 
-ccall [wsprintf], fmt_out_buf, fail_str, [argv_str]                  ; выводим сообщение об ошибке
+cinvoke wsprintf, fmt_out_buf, fail_str, [argv_str]                  ; выводим сообщение об ошибке
 stdcall [MessageBox], 0, fmt_out_buf, cap, MB_OK
 jmp _exit
 @@:                                                                  ; иначе продолжаем выполнение
@@ -161,7 +161,7 @@ fld1                                                                 ; загр�
 fld1                                                                 ; загружаем sum = 1 (результат вычислений)
 fld1                                                                 ; загружаем delta = 1
 
-                                                                     ; for(; |delta| > eps; ++i)
+; for(; |delta| > eps; ++i)
 
 @@:
 fld st0                                                              ; загружаем delta
@@ -185,7 +185,7 @@ fxch st1                                                             ; swap(st0,
 fst qword [.res]                                                     ; сохраняем значение sum
 
 frstor [esp]                                                         ; восстанавливаем состояние fpu
-                                                                     ; add esp, 0x200
+; add esp, 0x200
 
 mov esp, ebp
 pop ebp
